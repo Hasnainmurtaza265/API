@@ -1,5 +1,5 @@
 const express = require('express');
-const axios = require('axios');
+const fetch = require('node-fetch');
 const cors = require('cors');
 
 const app = express();
@@ -9,39 +9,45 @@ app.get('/api/player', async (req, res) => {
     const uid = req.query.uid;
 
     if (!uid) {
-        return res.status(400).json({ error: 'UID enter karna zaroori hai!' });
+        return res.status(400).json({ error: 'Please enter a valid UID!' });
     }
 
-    // Updated working Free Fire API list
+    // Direct active Free Fire endpoints
     const endpoints = [
-        `https://ff-api-ind.vercel.app/api/info?uid=${uid}`,
-        `https://api.gameskinbo.com/ff-info/get?uid=${uid}`,
-        `https://free-fire-api.vercel.app/api/v1/info?uid=${uid}`
+        `https://free-fire-api.vercel.app/api/v1/info?uid=${encodeURIComponent(uid)}`,
+        `https://ff-api-ind.vercel.app/api/info?uid=${encodeURIComponent(uid)}`
     ];
+
+    const customHeaders = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/json, text/plain, */*',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Cache-Control': 'no-cache'
+    };
 
     for (const url of endpoints) {
         try {
-            const response = await axios.get(url, { 
-                timeout: 7000,
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
-                }
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: customHeaders,
+                timeout: 8000
             });
 
-            const data = response.data;
+            if (!response.ok) continue;
 
-            // Check if response has valid player data
+            const data = await response.json();
+
+            // Extract basic player information correctly
             if (data && (data.basicInfo || data.AccountInfo || data.nickname)) {
                 return res.json(data);
             }
         } catch (err) {
-            // Agar ek API fail ho, toh next try karo
             continue;
         }
     }
 
-    return res.status(500).json({ 
-        error: 'Sabh APIs filhal busy hain. Sahi UID daal kar 10 sec baad try karein.' 
+    return res.status(500).json({
+        error: 'UID Invalid hai ya player server par nahi mila. Sahi UID daal kar re-try karein!'
     });
 });
 
