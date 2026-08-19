@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Free Fire Player Info</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #0f172a; color: #f8fafc; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+        .card { background: #1e293b; padding: 25px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5); width: 100%; max-width: 450px; }
+        h2 { text-align: center; color: #38bdf8; margin-top: 0; }
+        .input-group { display: flex; gap: 10px; margin-bottom: 20px; }
+        input { flex: 1; padding: 12px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: #fff; font-size: 16px; outline: none; }
+        button { padding: 12px 20px; border: none; background: #0284c7; color: white; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        button:hover { background: #0369a1; }
+        #loading { display: none; text-align: center; color: #38bdf8; font-weight: bold; }
+        #error { display: none; color: #ef4444; text-align: center; margin-bottom: 15px; }
+        #result { display: none; background: #0f172a; padding: 15px; border-radius: 8px; border: 1px solid #334155; }
+        .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #1e293b; }
+        .info-row:last-child { border-bottom: none; }
+        .label { color: #94a3b8; }
+        .value { font-weight: bold; color: #f1f5f9; }
+    </style>
+</head>
+
+<body>
+
+    <div class="card">
+        <h2>FF Player Lookup</h2>
+        <div class="input-group">
+            <input type="text" id="uidInput" placeholder="Enter Player UID (e.g. 4440653965)">
+            <button onclick="fetchPlayerData()">Search</button>
+        </div>
+
+        <div id="loading">Searching... Please wait.</div>
+        <div id="error"></div>
+
+        <div id="result">
+            <div class="info-row"><span class="label">Name:</span><span class="value" id="name">-</span></div>
+            <div class="info-row"><span class="label">Level:</span><span class="value" id="level">-</span></div>
+            <div class="info-row"><span class="label">Region:</span><span class="value" id="region">-</span></div>
+            <div class="info-row"><span class="label">Likes:</span><span class="value" id="likes">-</span></div>
+            <div class="info-row"><span class="label">BR Rank Points:</span><span class="value" id="brRank">-</span></div>
+            <div class="info-row"><span class="label">Guild Name:</span><span class="value" id="guild">-</span></div>
+            <div class="info-row"><span class="label">Credit Score:</span><span class="value" id="credit">-</span></div>
+        </div>
+    </div>
+
+    <script>
+        async function fetchPlayerData() {
+            const uid = document.getElementById('uidInput').value.trim();
+            const loadingDiv = document.getElementById('loading');
+            const errorDiv = document.getElementById('error');
+            const resultDiv = document.getElementById('result');
+
+            if (!uid) {
+                errorDiv.innerText = "Please enter a UID!";
+                errorDiv.style.display = "block";
+                return;
+            }
+
+            errorDiv.style.display = "none";
+            resultDiv.style.display = "none";
+            loadingDiv.style.display = "block";
+
+            try {
+                const response = await fetch(`/api/player?uid=${encodeURIComponent(uid)}`);
+                const data = await response.json();
+
+                if (!response.ok || data.error) {
+                    throw new Error(data.error || "Player Data nahi mila!");
+                }
+
+                const basicInfo = data.basicInfo || data.AccountInfo || {};
+
+                document.getElementById('name').innerText = basicInfo.nickname || basicInfo.AccountName || "N/A";
+                document.getElementById('level').innerText = basicInfo.level || basicInfo.AccountLevel || "N/A";
+                document.getElementById('region').innerText = basicInfo.region || basicInfo.AccountRegion || "IND";
+                document.getElementById('likes').innerText = basicInfo.liked || basicInfo.AccountLikes || "N/A";
+                document.getElementById('brRank').innerText = basicInfo.rankingPoints || data.AccountProfileInfo?.BrRankPoint || "N/A";
+                document.getElementById('guild').innerText = data.clanBasicInfo?.clanName || data.GuildInfo?.GuildName || "No Guild";
+                document.getElementById('credit').innerText = data.creditScoreInfo?.creditScore || "N/A";
+
+                loadingDiv.style.display = "none";
+                resultDiv.style.display = "block";
+
+            } catch (error) {
+                loadingDiv.style.display = "none";
+                errorDiv.innerText = error.message;
+                errorDiv.style.display = "block";
+            }
+        }
+    </script>
+</body>
+
+</html>
